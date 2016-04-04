@@ -1,37 +1,55 @@
-var http = require("http"),
-    url = require("url"),
-    path = require("path"),
-    fs = require("fs"),
-    port = process.argv[2] || 8080;
 
-http.createServer(function(request, response) {
+// HTTP Portion
+var http = require('http');
+// Path module
+var path = require('path');
 
-  var uri = url.parse(request.url).pathname
-    , filename = path.join(process.cwd(), uri);
+// Using the filesystem module
+var fs = require('fs');
 
-  fs.exists(filename, function(exists) {
-    if(!exists) {
-      response.writeHead(404, {"Content-Type": "text/plain"});
-      response.write("404 Not Found\n");
-      response.end();
-      return;
-    }
+var ip = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
+var port = process.env.OPENSHIFT_NODEJS_PORT || 8080;
 
-    if (fs.statSync(filename).isDirectory()) filename += '/index.html';
 
-    fs.readFile(filename, "binary", function(err, file) {
-      if(err) {        
-        response.writeHead(500, {"Content-Type": "text/plain"});
-        response.write(err + "\n");
-        response.end();
-        return;
+var server = http.createServer(handleRequest);
+server.listen(port, ip);
+
+console.log('Server started on port ' + port );
+
+function handleRequest(req, res) {
+  // What did we request?
+  var pathname = req.url;
+  
+  // If blank let's ask for index.html
+  if (pathname == '/') {
+    pathname = '/index.html';
+  }
+  
+  // Ok what's our file extension
+  var ext = path.extname(pathname);
+
+  // Map extension to file type
+  var typeExt = {
+    '.html': 'text/html',
+    '.js':   'text/javascript',
+    '.css':  'text/css'
+  };
+  // What is it?  Default to plain text
+
+  var contentType = typeExt[ext] || 'text/plain';
+
+  // User file system module
+  fs.readFile(__dirname + pathname,
+    // Callback function for reading
+    function (err, data) {
+      // if there is an error
+      if (err) {
+        res.writeHead(500);
+        return res.end('Error loading ' + pathname);
       }
-
-      response.writeHead(200);
-      response.write(file, "binary");
-      response.end();
-    });
-  });
-}).listen(parseInt(port, 10));
-
-console.log("nodyp5 server running at\n  => http://localhost:" + port + "/\nCTRL + C to shutdown");
+      // Otherwise, send the data, the contents of the file
+      res.writeHead(200,{ 'Content-Type': contentType });
+      res.end(data);
+    }
+  );
+}

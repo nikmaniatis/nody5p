@@ -9,3 +9,7 @@ https://www.npmjs.com/package/p5-cli
 or
 http-server - A zero-configuration command-line http server (p5.js are not included)
 https://www.npmjs.com/package/http-server
+
+or 
+live-server - live reloading 
+https://github.com/tapio/live-server
